@@ -17,6 +17,7 @@ import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mifos.connector.ams.paygops.camel.config.CamelProperties.*;
 import static org.mifos.connector.ams.paygops.camel.config.CamelProperties.AMS_REQUEST;
 import static org.mifos.connector.ams.paygops.camel.config.CamelProperties.CHANNEL_REQUEST;
 import static org.mifos.connector.ams.paygops.zeebe.ZeebeVariables.*;
@@ -68,7 +69,13 @@ public class ZeebeWorkers {
                         producerTemplate.send("direct:transfer-validation-base", ex);
 
                         boolean isPartyLookUpFailed = ex.getProperty(PARTY_LOOKUP_FAILED, boolean.class);
-                        variables.put(PARTY_LOOKUP_FAILED, isPartyLookUpFailed);
+                        if(isPartyLookUpFailed) {
+                            variables.put(PARTY_LOOKUP_FAILED, true);
+                            setErrorInfo(variables,ex);
+                        } else {
+                            variables.put(PARTY_LOOKUP_FAILED, false);
+                        }
+
                     } else {
                         variables = new HashMap<>();
                         variables.put(PARTY_LOOKUP_FAILED, false);
@@ -76,7 +83,8 @@ public class ZeebeWorkers {
 
                     zeebeClient.newCompleteCommand(job.getKey())
                             .variables(variables)
-                            .send();
+                            .send()
+                            .join();
                 })
                 .name("transfer-validation-paygops")
                 .maxJobsActive(workerMaxJobs)
@@ -100,8 +108,15 @@ public class ZeebeWorkers {
                         logger.info("Channel Request :" + ex.getProperty(CHANNEL_REQUEST));
                         producerTemplate.send("direct:transfer-settlement-base", ex);
                         boolean isSettlementFailed = ex.getProperty(TRANSFER_SETTLEMENT_FAILED, boolean.class);
-                        variables.put(ZeebeVariables.AMS_REQUEST,ex.getProperty(AMS_REQUEST));
-                        variables.put(TRANSFER_SETTLEMENT_FAILED, isSettlementFailed);
+                        if (isSettlementFailed) {
+                            variables.put(TRANSFER_SETTLEMENT_FAILED, true);
+                            setErrorInfo(variables,ex);
+
+                        } else {
+                            variables.put(ZeebeVariables.AMS_REQUEST,ex.getProperty(AMS_REQUEST));
+                            variables.put(TRANSFER_SETTLEMENT_FAILED, false);
+                        }
+
                     } else {
                         variables = new HashMap<>();
                         variables.put(TRANSFER_SETTLEMENT_FAILED, false);
@@ -128,6 +143,12 @@ public class ZeebeWorkers {
         jsonJob.put("workflowKey", job.getProcessDefinitionKey());
         jsonJob.put("workflowInstanceKey", job.getProcessInstanceKey());
         logger.info("Job started: {}", jsonJob.toString(4));
+    }
+
+    private void setErrorInfo(Map<String, Object> variables,Exchange ex ){
+        variables.put(ERROR_INFORMATION, ex.getProperty(ERROR_INFORMATION, String.class));
+        variables.put(ERROR_CODE, ex.getProperty(ERROR_CODE, String.class));
+        variables.put(ERROR_DESCRIPTION, ex.getProperty(ERROR_DESCRIPTION, String.class));
     }
 
 }
