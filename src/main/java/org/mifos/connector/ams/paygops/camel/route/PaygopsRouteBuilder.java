@@ -99,8 +99,6 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                         exchange.setProperty("accountStatus","REJECTED");
                         exchange.setProperty("subStatus", "");
                     }
-
-
                 })
                 .otherwise()
                 .log(LoggingLevel.ERROR, "Paygops Validation unsuccessful")
@@ -128,7 +126,6 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                     {
                         JSONObject channelRequest = (JSONObject) exchange.getProperty(CHANNEL_REQUEST);
                         String transactionId = exchange.getProperty(TRANSACTION_ID, String.class);
-                        //logger.info(exchange.getProperty(CHANNEL_REQUEST).toString());
                         PaygopsRequestDTO verificationRequestDTO = getPaygopsDtoFromChannelRequest(channelRequest,
                                 transactionId);
                         logger.info("Validation request DTO: \n\n\n" + verificationRequestDTO);
@@ -187,16 +184,10 @@ public class PaygopsRouteBuilder extends RouteBuilder {
 
         from("rest:POST:/api/v1/paybill/paygops")
                 .id("validate-user")
-//                .unmarshal().json(JsonLibrary.Jackson, PaybillRequestDTO.class)
                 .log(LoggingLevel.INFO, "## Paygops user validation")
                 .setBody(e -> {
-//                    PaygopsRequestDTO dto = e.getIn().getBody(PaygopsRequestDTO.class);
                     String body=e.getIn().getBody(String.class);
                     logger.info("Body : {}",body);
-//                    JSONObject paybillRequest = new JSONObject(body);
-//                    obj.put("wallet_msisdn",paybillRequest.
-//                    e.getIn().setBody(obj.toString());
-//                    e.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE,200);
                     return body;
                 })
                 .to("direct:transfer-validation-base")
@@ -212,13 +203,10 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                 .setHeader("Authorization", simple("Bearer "+ accessToken))
                 .setHeader("Content-Type", constant("application/json"))
                 .setBody(exchange -> {
-
                     JSONObject channelRequest = (JSONObject) exchange.getProperty(CHANNEL_REQUEST);
                     String transactionId = exchange.getProperty(TRANSACTION_ID, String.class);
-                    //logger.info(exchange.getProperty(CHANNEL_REQUEST).toString());
                     PaygopsRequestDTO confirmationRequestDTO = getPaygopsDtoFromChannelRequest(channelRequest,
                             transactionId);
-
                     logger.info("Confirmation request DTO: \n\n\n" + confirmationRequestDTO);
                     exchange.setProperty(AMS_REQUEST,confirmationRequestDTO.toString());
                     return confirmationRequestDTO;
