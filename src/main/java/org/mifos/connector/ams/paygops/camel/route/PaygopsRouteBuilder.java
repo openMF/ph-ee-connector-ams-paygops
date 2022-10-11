@@ -158,13 +158,30 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                     // processing success case
                     try {
                         String body = exchange.getIn().getBody(String.class);
-                        JSONObject jsonObject = new JSONObject(body);
-                        exchange.setProperty(TRANSFER_SETTLEMENT_FAILED, false);
+//                        JSONObject jsonObject = new JSONObject(body);
+//                        exchange.setProperty(TRANSFER_SETTLEMENT_FAILED, false);
+                        ObjectMapper mapper = new ObjectMapper();
+                        PaygopsResponseDto result = mapper.readValue(body, PaygopsResponseDto.class);
+                        if (result.getReconciled()) {
+                            logger.info("Paygops Settlement Successful");
+                            exchange.setProperty(TRANSFER_SETTLEMENT_FAILED, false);
+                            exchange.setProperty("accountStatus","ACTIVE");
+                            exchange.setProperty("subStatus", "");
+                        } else {
+                            setErrorCamelInfo(exchange,"Settlement Unsuccessful: Reconciled field returned false",
+                                    ErrorCodeEnum.RECONCILIATION.getCode(), result.toString());
+
+                            exchange.setProperty(TRANSFER_SETTLEMENT_FAILED, true);
+                            exchange.setProperty("accountStatus","REJECTED");
+                            exchange.setProperty("subStatus", "");
+                        }
                     } catch (Exception e) {
                         logger.info("Body could not be passed due to : {} ", String.valueOf(e));
                         setErrorCamelInfo(exchange,"Body data could not be parsed,setting confirmation as failed",
                                 ErrorCodeEnum.DEFAULT.getCode(), exchange.getIn().getBody(String.class));
                         exchange.setProperty(TRANSFER_SETTLEMENT_FAILED, true);
+                        exchange.setProperty("accountStatus","REJECTED");
+                        exchange.setProperty("subStatus", "");
                     }
 
 
@@ -182,7 +199,7 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                     exchange.setProperty(TRANSFER_SETTLEMENT_FAILED, true);
                 });
 
-        from("rest:POST:/api/v1/paybill/paygops")
+        from("rest:POST:/api/v1/paybill/validate/paygops")
                 .id("validate-user")
                 .log(LoggingLevel.INFO, "## Paygops user validation")
                 .setBody(e -> {
@@ -195,6 +212,19 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                     logger.info("Response received from validation base : {}",e.getProperty("accountStatus"));
                 });
 
+        from("rest:POST:/api/v1/paybill/confirm/paygops")
+                .id("confirm-user")
+                .log(LoggingLevel.INFO, "## Paygops user confirmation")
+                .setBody(e -> {
+                    String body=e.getIn().getBody(String.class);
+                    logger.info("Body : {}",body);
+                    return body;
+                })
+                .to("direct:transfer-settlement-base")
+                .process(e->{
+                    logger.info("Response received from confirmation base : {}",e.getProperty("accountStatus"));
+                });
+
         from("direct:transfer-settlement")
                 .id("transfer-settlement")
                 .log(LoggingLevel.INFO, "## Starting transfer settlement route")
@@ -203,13 +233,26 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                 .setHeader("Authorization", simple("Bearer "+ accessToken))
                 .setHeader("Content-Type", constant("application/json"))
                 .setBody(exchange -> {
-                    JSONObject channelRequest = (JSONObject) exchange.getProperty(CHANNEL_REQUEST);
-                    String transactionId = exchange.getProperty(TRANSACTION_ID, String.class);
-                    PaygopsRequestDTO confirmationRequestDTO = getPaygopsDtoFromChannelRequest(channelRequest,
-                            transactionId);
-                    logger.info("Confirmation request DTO: \n\n\n" + confirmationRequestDTO);
-                    exchange.setProperty(AMS_REQUEST,confirmationRequestDTO.toString());
-                    return confirmationRequestDTO;
+                    if(exchange.getProperty(CHANNEL_REQUEST) != null)
+                    {
+                        JSONObject channelRequest = (JSONObject) exchange.getProperty(CHANNEL_REQUEST);
+                        String transactionId = exchange.getProperty(TRANSACTION_ID, String.class);
+                        PaygopsRequestDTO confirmationRequestDTO = getPaygopsDtoFromChannelRequest(channelRequest,
+                                transactionId);
+                        logger.info("Confirmation request DTO: \n\n\n" + confirmationRequestDTO);
+                        exchange.setProperty(AMS_REQUEST,confirmationRequestDTO.toString());
+                        return confirmationRequestDTO;
+                    }
+                    else {
+                        JSONObject paybillRequest = new JSONObject(exchange.getIn().getBody(String.class));
+                        PaygopsRequestDTO paygopsRequestDTO = PayloadUtils.convertPaybillPayloadToAmsPaygopsPayload(paybillRequest);
+
+                        String transactionId = paygopsRequestDTO.getTransactionId();
+                        log.info(paygopsRequestDTO.toString());
+                        exchange.setProperty(TRANSACTION_ID, transactionId);
+                        logger.info("Confirmation request DTO: \n\n\n" + paygopsRequestDTO);
+                        return paygopsRequestDTO;
+                    }
                 })
                 .marshal().json(JsonLibrary.Jackson)
                 .toD(getConfirmationEndpoint() + "?bridgeEndpoint=true&throwExceptionOnFailure=false&" +
