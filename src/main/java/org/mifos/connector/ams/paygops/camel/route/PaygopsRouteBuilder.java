@@ -5,6 +5,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.util.json.JsonObject;
 import org.json.JSONObject;
 import org.mifos.connector.ams.paygops.paygopsDTO.PaygopsRequestDTO;
 import org.mifos.connector.ams.paygops.paygopsDTO.PaygopsResponseDto;
@@ -14,8 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 import static org.mifos.connector.ams.paygops.camel.config.CamelProperties.*;
 import static org.mifos.connector.ams.paygops.camel.config.CamelProperties.AMS_REQUEST;
@@ -40,6 +39,12 @@ public class PaygopsRouteBuilder extends RouteBuilder {
 
     @Value("${ams.timeout}")
     private Integer amsTimeout;
+
+
+
+    public PaygopsRouteBuilder() {
+
+    }
 
 
     @Override
@@ -71,12 +76,11 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                 .choice()
                 .when(header("CamelHttpResponseCode").isEqualTo("200"))
                 .log(LoggingLevel.INFO, "Paygops Validation Response Received")
+                .unmarshal().json(JsonLibrary.Jackson, PaygopsResponseDto.class)
                 .process(exchange -> {
                     // processing success case
                     try {
-                        String body = exchange.getIn().getBody(String.class);
-                        ObjectMapper mapper = new ObjectMapper();
-                        PaygopsResponseDto result = mapper.readValue(body, PaygopsResponseDto.class);
+                        PaygopsResponseDto result = exchange.getIn().getBody(PaygopsResponseDto.class);
                         if (result.getReconciled()) {
                             logger.info("Paygops Validation Successful");
                             exchange.setProperty(PARTY_LOOKUP_FAILED, false);
