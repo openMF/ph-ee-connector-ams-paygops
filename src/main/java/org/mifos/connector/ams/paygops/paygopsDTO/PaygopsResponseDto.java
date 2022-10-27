@@ -1,6 +1,8 @@
 package org.mifos.connector.ams.paygops.paygopsDTO;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class PaygopsResponseDto {
 
@@ -59,7 +61,7 @@ public class PaygopsResponseDto {
     private String destination_type;
 
     @JsonProperty("destinations")
-    private String [] destinations = new String[1];
+    private Object[] destinations = new Object[1];
 
     @Override
     public String toString() {
@@ -171,11 +173,11 @@ public class PaygopsResponseDto {
         this.destination_type = destination_type;
     }
 
-    public String[] getDestinations() {
+    public Object[] getDestinations() {
         return destinations;
     }
 
-    public void setDestination(String[] destinations) {
+    public void setDestination(Object[] destinations) {
         this.destinations = destinations;
     }
 }
