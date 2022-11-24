@@ -6,9 +6,6 @@ camel:
     json-jackson:
       auto-discover-object-mapper: true
 
-server:
-  port: 8082
-
 zeebe:
   client:
     max-execution-threads: 100
