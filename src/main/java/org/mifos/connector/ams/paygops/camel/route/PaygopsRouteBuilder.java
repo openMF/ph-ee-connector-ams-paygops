@@ -217,14 +217,14 @@ public class PaygopsRouteBuilder extends RouteBuilder {
                 .to("direct:transfer-validation-base")
                 .process(e->{
                     String transactionId= e.getProperty(TRANSACTION_ID).toString();
-                    logger.info("Transaction Id : "+transactionId);
-                    logger.info("Response received from validation base : {}",e.getIn().getBody());
+                    logger.debug("Transaction Id : {}",transactionId);
+                    logger.debug("Response received from validation base : {}",e.getIn().getBody());
                     // Building the response
                     JSONObject responseObject=new JSONObject();
                     responseObject.put("reconciled", e.getProperty(PARTY_LOOKUP_FAILED).equals(false));
                     responseObject.put("AMS", "paygops");
                     responseObject.put("transaction_id", transactionId);
-                    logger.info("response object "+responseObject);
+                    logger.debug("response object :{}",responseObject);
                     e.getIn().setBody(responseObject.toString());
                     logger.info("Response received from validation base : {}",e.getProperty("accountStatus"));
                 });
