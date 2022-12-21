@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Arrays;
+
 public class PaygopsResponseDto {
 
     /*"transaction_id": "simon_nationalID_test2",
@@ -20,10 +22,6 @@ public class PaygopsResponseDto {
     "destination_type": "contract_repayment",
     "destination": "C391270014"
     */
-
-    PaygopsResponseDto(){
-
-    }
     @JsonProperty("transaction_id")
     private String transaction_id;
 
@@ -44,6 +42,12 @@ public class PaygopsResponseDto {
 
     @JsonProperty("wallet_operator")
     private String wallet_operator;
+    @JsonProperty("wallet_name")
+    private String wallet_name;
+    @JsonProperty("wallet_msisdn")
+    private String wallet_msisdn;
+    @JsonProperty("reception_datetime")
+    private String reception_datetime;
 
     @JsonProperty("country")
     private String country;
@@ -60,20 +64,43 @@ public class PaygopsResponseDto {
     @JsonProperty("destination_type")
     private String destination_type;
 
+    public String getDestination() {
+        return destination;
+    }
+
+    public void setDestination(String destination) {
+        this.destination = destination;
+    }
+
+    @JsonProperty("destination")
+    private String destination;
     @JsonProperty("destinations")
     private Object[] destinations = new Object[1];
 
+    PaygopsResponseDto(){
+
+    }
+
     @Override
     public String toString() {
-        return "PaygopsRequestDTO{" +
-                "transactionId='" + transaction_id + '\'' +
+        return "PaygopsResponseDto{" +
+                "transaction_id='" + transaction_id + '\'' +
                 ", amount='" + amount + '\'' +
-                ", sender phone number=" + sender_phone_number +
+                ", sender_name='" + sender_name + '\'' +
+                ", sender_phone_number='" + sender_phone_number + '\'' +
+                ", sent_datetime='" + sent_datetime + '\'' +
                 ", memo='" + memo + '\'' +
-                ", wallet operator=" + wallet_operator +
-                ", country=" + country +
-                ", currency=" + currency +
-                ", reconciled field=" + reconciled +
+                ", wallet_operator='" + wallet_operator + '\'' +
+                ", wallet_name='" + wallet_name + '\'' +
+                ", wallet_msisdn='" + wallet_msisdn + '\'' +
+                ", reception_datetime='" + reception_datetime + '\'' +
+                ", country='" + country + '\'' +
+                ", currency='" + currency + '\'' +
+                ", warnings=" + Arrays.toString(warnings) +
+                ", reconciled=" + reconciled +
+                ", destination_type='" + destination_type + '\'' +
+                ", destination='" + destination + '\'' +
+                ", destinations=" + Arrays.toString(destinations) +
                 '}';
     }
 
@@ -133,6 +160,30 @@ public class PaygopsResponseDto {
         this.wallet_operator = wallet_operator;
     }
 
+    public String getWallet_name() {
+        return wallet_name;
+    }
+
+    public void setWallet_name(String wallet_name) {
+        this.wallet_name = wallet_name;
+    }
+
+    public String getWallet_msisdn() {
+        return wallet_msisdn;
+    }
+
+    public void setWallet_msisdn(String wallet_msisdn) {
+        this.wallet_msisdn = wallet_msisdn;
+    }
+
+    public String getReception_datetime() {
+        return reception_datetime;
+    }
+
+    public void setReception_datetime(String reception_datetime) {
+        this.reception_datetime = reception_datetime;
+    }
+
     public String getCountry() {
         return country;
     }
@@ -177,7 +228,7 @@ public class PaygopsResponseDto {
         return destinations;
     }
 
-    public void setDestination(Object[] destinations) {
+    public void setDestinations(Object[] destinations) {
         this.destinations = destinations;
     }
 }

@@ -100,7 +100,6 @@ public class ZeebeWorkers {
                         Exchange ex = new DefaultExchange(camelContext);
                         // Do stuff here
                         variables = job.getVariablesAsMap();
-
                         JSONObject channelRequest = new JSONObject((String) variables.get("channelRequest"));
                         String transactionId = (String) variables.get(TRANSACTION_ID);
                         ex.setProperty(TRANSACTION_ID, variables.getOrDefault(EXTERNAL_ID, transactionId));
