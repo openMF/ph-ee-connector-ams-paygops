@@ -1,0 +1,49 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/*'
+      - feature/add_github_actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get Revision
+        run: |
+          VERSION_TAG=$(./gradlew -q printVersion)
+          echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
+          IMAGE_TAGS="${VERSION_TAG}.$(date '+%Y.%m.%d').${GITHUB_SHA}"
+          echo "IMAGE_SEMANTIC_HASH=$IMAGE_TAGS" >> $GITHUB_ENV
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then IMAGE_TAGS="$VERSION_TAG,latest"; fi;
+          echo "IMAGE_TAGS=$IMAGE_TAGS" >> $GITHUB_ENV
+
+      - name: Build with Gradle
+        uses: eskatos/gradle-command-action@v1
+        with:
+          arguments: 'bootJar :test --info --build-cache'
+
+      - name: Login to Azure registry
+        run: az acr login --name azurecr-oaf
+
+      - name: Build Docker image
+        run: docker build . -t oneacrefund/paygops-ams-connector:${{ env.IMAGE_TAGS }}
+
+      - name: Push Docker image to registry
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          docker push oneacrefund/paygops-ams-connector:${{ env.IMAGE_TAGS }}
+
+      - name: Publish configuration package
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/feature/add_github_actions' || startsWith(github.ref, 'refs/heads/release/')
+        uses: actions/upload-artifact@v2
+        with:
+          name: paygops-ams-connector
+          path: ${{ github.workspace }}/build/libs
