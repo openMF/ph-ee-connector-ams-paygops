@@ -1,7 +1,6 @@
 package org.mifos.connector.ams.paygops.paygopsDTO;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jdk.nashorn.internal.objects.annotations.Property;
 import lombok.*;
 
 import java.util.List;
